@@ -162,17 +162,25 @@ $(function () {
 
   $('.examples code').on('click', function () {
     const $code = $(this)
-    return $code
-      .parents('section:first')
-      .find('input')
-      .val($code.text())
-      .trigger('change')
+    const $section = $code.parents('section:first')
+
+    if ($section.attr('id') === 'rfc-input') {
+      return $section
+          .find('textarea')
+          .val($code.text())
+          .trigger('change')
+    } else {
+      return $section
+          .find('input')
+          .val($code.text())
+          .trigger('change')
+    }
   })
 
   let init: string
   let makeRule: () => RRule
 
-  $('input, select').on('keyup change', function () {
+  $('input, select, textarea').on('keyup change', function () {
     const $in = $(this)
     const $section = $in.parents('section:first')
     const inputMethod = $section.attr('id')!.split('-')[0]
@@ -338,9 +346,16 @@ $(function () {
         const method = match[1] // rfc | text
         const arg = match[2]
         activateTab($(`a[href='#${method}-input']`))
-        return $(`#${method}-input input:first`)
-          .val(arg)
-          .trigger('change')
+
+        if (method === 'rfc') {
+          return $(`#${method}-input textarea:first`)
+            .val(arg)
+            .trigger('change')
+        } else {
+            return $(`#${method}-input input:first`)
+                .val(arg)
+                .trigger('change')
+        }
       }
     }
   }

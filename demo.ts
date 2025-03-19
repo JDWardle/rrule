@@ -1,4 +1,7 @@
 import * as $ from 'jquery'
+import dayjs from 'dayjs'
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
 
 import { RRule, Weekday, Options } from 'rrule'
 
@@ -6,6 +9,9 @@ import { RRule, Weekday, Options } from 'rrule'
 // tslint:disable-next-line:no-duplicate-imports
 import * as rruleExports from 'rrule'
 $.extend(window, rruleExports)
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 const getDay = (i: number) => [
   RRule.MO,
@@ -99,28 +105,12 @@ const getOptionsCode = function (options: Partial<Options>) {
   return `{\n  ${items.filter(v => !!v).join(',\n  ')}\n}`
 }
 
-const makeRows = function (dates: Date[]) {
-  let prevParts: string[] = []
-  let prevStates: boolean[] = []
-
+const makeRows = function (dates: Date[], tzid: string | null) {
   const rows = dates.map((date, index) => {
-    let states: boolean[] = []
-    let parts = date.toUTCString().split(' ')
+    const dayjsDate = dayjs(date);
+    let dateStr = tzid ? dayjsDate.tz(tzid).format() : dayjsDate.format();
 
-    const cells = parts.map((part, i) => {
-      if (part !== prevParts[i]) {
-        states[i] = !prevStates[i]
-      } else {
-        states[i] = prevStates[i]
-      }
-      const cls = states[i] ? 'a' : 'b'
-      return `<td class='${cls}'>${part}</td>`
-    })
-
-    prevParts = parts
-    prevStates = states
-
-    return `<tr><td>${index + 1}</td>${cells.join('\n')}</tr>`
+    return `<tr><td>${index + 1}</td><td>${dateStr}</td></tr>`
   })
 
   return rows.join('\n\n')
@@ -191,7 +181,9 @@ $(function () {
         init = `RRule.fromText("${(this as HTMLFormElement).value}")`
         break
       case 'rfc':
-        makeRule = () => RRule.fromString((this as HTMLFormElement).value)
+        let value  = ((this as HTMLFormElement).value).replace(/\\n/g, '\n').replace(/\\r/g, '\r');
+        $in.val(value);
+        makeRule = () => RRule.fromString(value);
         init = `RRule.fromString("${(this as HTMLFormElement).value}")`
         break
       case 'options':
@@ -300,14 +292,14 @@ $(function () {
       return
     }
 
-    const rfc = rule.toString()
-    const text = rule.toText()
+    const rfc = rule.toString();
+    const text = rule.toText();
     $('#rfc-output a')
       .text(rfc)
-      .attr('href', `#/rfc/${rfc}`)
+      .attr('href', `#/rfc/${encodeURIComponent(rfc)}`)
     $('#text-output a')
       .text(text)
-      .attr('href', `#/text/${text}`)
+      .attr('href', `#/text/${encodeURIComponent(text)}`)
     $('#options-output').text(getOptionsCode(rule.origOptions))
     if (inputMethod === 'options') {
       $('#options-output')
@@ -326,7 +318,7 @@ $(function () {
       return true
     })
 
-    let html = makeRows(dates)
+    let html = makeRows(dates, rule.options.tzid)
     if (!rule.options.count) {
       html += `\
 <tr><td colspan='7'><em>Showing first ${max} dates, set
@@ -344,7 +336,7 @@ $(function () {
       const match = /^\/(rfc|text)\/(.+)$/.exec(hash)
       if (match) {
         const method = match[1] // rfc | text
-        const arg = match[2]
+        const arg = decodeURIComponent(match[2]);
         activateTab($(`a[href='#${method}-input']`))
 
         if (method === 'rfc') {

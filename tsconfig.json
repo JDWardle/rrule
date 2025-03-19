@@ -12,7 +12,8 @@
     "jsx": "react",
     "strictNullChecks": true,
     "importHelpers": true,
-    "rootDirs": ["./"]
+    "rootDirs": ["./"],
+    "allowSyntheticDefaultImports": true
   },
   "exclude": ["node_modules", "dist"]
 }
